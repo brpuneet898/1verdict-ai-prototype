@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>Register - 1Verdict AI Prototype</title>
+    <title>Login - 1Verdict AI Prototype</title>
     <link
       rel="stylesheet"
       href="{{ url_for('static', filename='style.css') }}"
@@ -16,20 +16,17 @@
       </div>
     </div>
     <div class="register-container">
-      <h1>Register</h1>
+      <h1>Login</h1>
       <form method="post" action="/register">
-        <label for="username">Name:</label>
-        <input type="text" id="username" name="username" required />
-
         <label for="email">Email:</label>
         <input type="email" id="email" name="email" required />
 
         <label for="password">Password:</label>
         <input type="password" id="password" name="password" required />
 
-        <button type="submit">Register</button>
+        <button type="submit">Login</button>
       </form>
-      <p>Already have an account? <a href="/login">Login here</a>.</p>
+      <p>No account details? <a href="/register">Register here</a>.</p>
       <div class="go-back-container">
         <a href="/" class="go-back-btn">← Go Back</a>
       </div>
