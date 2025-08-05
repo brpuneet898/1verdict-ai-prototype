@@ -1,3 +1,13 @@
-flask
-flask_sqlalchemy
+Flask
+Flask-SQLAlchemy
 werkzeug
+google-generativeai
+langchain
+langchain-community
+langchain-core
+langchain-google-genai
+sentence-transformers
+faiss-cpu
+PyPDF2
+python-docx
+numpy

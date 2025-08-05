@@ -7,13 +7,92 @@
       rel="stylesheet"
       href="{{ url_for('static', filename='style.css') }}"
     />
-  </head>
-  <body>
+</head>
+<body>
     <div class="top-bar">
-      <div class="button-group">
-        <a href="/logout" class="btn">Logout</a>
-      </div>
+        <div class="user-greeting">
+            {% if user_name %}
+                Hi, {{ user_name }}
+            {% endif %}
+        </div>
+        <div class="button-group">
+            <a href="/logout" class="btn">Logout</a>
+        </div>
     </div>
-    <h1>1Verdict AI Prototype</h1>
-  </body>
+
+    <div class="dashboard-container">
+        <h1>Document Analysis</h1>
+
+        <!-- Flash Messages will be displayed here -->
+        <div class="flash-container">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+        </div>
+
+        <form method="post" enctype="multipart/form-data" class="upload-form">
+            <div class="file-input-wrapper">
+                <label for="file" class="file-label">
+                    <span id="file-name-display">Choose a file (.docx, .pdf)</span>
+                </label>
+                <input type="file" id="file" name="file" accept=".pdf,.docx" required>
+                <button type="button" id="remove-file-btn" class="btn-remove" style="display: none;">Remove</button>
+            </div>
+            
+            <div class="action-buttons">
+                <button type="submit" name="action" value="summarize" class="btn-action">Summarize</button>
+                <button type="submit" name="action" value="review" class="btn-action btn-disabled" disabled>Review Key Clauses</button>
+            </div>
+        </form>
+
+        {% if summary %}
+        <div class="results-area">
+            <h2>Summary</h2>
+            <div class="result-content">
+                <p>{{ summary }}</p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // --- Logic for Interactive File Input ---
+            const fileInput = document.getElementById('file');
+            const fileNameDisplay = document.getElementById('file-name-display');
+            const removeFileBtn = document.getElementById('remove-file-btn');
+
+            fileInput.addEventListener('change', function() {
+                if (this.files.length > 0) {
+                    fileNameDisplay.textContent = this.files[0].name;
+                    removeFileBtn.style.display = 'inline-block';
+                } else {
+                    fileNameDisplay.textContent = 'Choose a file (.docx, .pdf)';
+                    removeFileBtn.style.display = 'none';
+                }
+            });
+
+            removeFileBtn.addEventListener('click', function() {
+                fileInput.value = ''; // Clear the file input
+                fileNameDisplay.textContent = 'Choose a file (.docx, .pdf)';
+                removeFileBtn.style.display = 'none';
+            });
+
+            // --- Logic for Fading Flash Messages ---
+            const flashMessages = document.querySelectorAll('.alert');
+            flashMessages.forEach(function(message) {
+                // Set a timeout to add the fade-out class
+                setTimeout(() => {
+                    message.classList.add('fade-out');
+                    // Remove the element from the DOM after the transition ends
+                    message.addEventListener('transitionend', () => message.remove());
+                }, 2000); // Message disappears after 4 seconds
+            });
+        });
+    </script>
+</body>
 </html>
