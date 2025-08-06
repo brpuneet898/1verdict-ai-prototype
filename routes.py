@@ -3,7 +3,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from models import User, db
-from logics import summarize_text
+from logics import summarize_text, review_key_clauses
 
 main = Blueprint('main', __name__)
 
@@ -62,43 +62,43 @@ def dashboard():
         flash('Please log in to access the dashboard.', 'warning')
         return redirect(url_for('main.login'))
     summary = None
+    clauses = None # Initialize clauses variable
     if request.method == 'POST':
-        if 'file' not in request.files:
-            flash('No file part', 'danger')
+        if 'file' not in request.files or not request.files['file'].filename:
+            flash('No file selected', 'danger')
             return redirect(request.url)
+        
         file = request.files['file']
-
-        if file.filename == '':
-            flash('No selected file', 'danger')
-            return redirect(request.url)
+        action = request.form.get('action')
 
         if file and allowed_file(file.filename):
-            filename = secure_filename(file.filename)
-            filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
-            file.save(filepath)
-            
             try:
-                llm = current_app.llm
-                # Generate the summary
-                summary_result = summarize_text(filepath, llm)
+                filename = secure_filename(file.filename)
+                filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+                file.save(filepath)
                 
-                # --- THIS IS THE FIX ---
-                # Check if the generated summary is actually valid before showing success
-                if summary_result and summary_result.strip():
+                llm = current_app.llm
+
+                # --- NEW: ROUTING LOGIC FOR ACTIONS ---
+                if action == 'summarize':
+                    summary = summarize_text(filepath, llm)
                     flash('Summary generated successfully!', 'success')
-                    summary = summary_result # Assign the valid summary to be displayed
-                else:
-                    flash('The model returned an empty summary. Please try again with a different file.', 'warning')
+                
+                elif action == 'review':
+                    clauses = review_key_clauses(filepath, llm)
+                    flash('Key clauses reviewed successfully!', 'success')
+                
+                if os.path.exists(filepath):
+                    os.remove(filepath)
 
             except Exception as e:
                 flash(f'An error occurred: {e}', 'danger')
-                print(f"Error during summarization: {e}")
+                print(f"Error during processing: {e}")
         else:
             flash('Invalid file type. Please upload a .pdf or .docx file.', 'danger')
+    
+    return render_template('dashboard.html', user_name=session.get('user_name'), summary=summary, clauses=clauses)
 
-    # This single return handles all cases: loading the page for the first time,
-    # and re-loading the page after a summary is generated.
-    return render_template('dashboard.html', user_name=session.get('user_name'), summary=summary)
 
 
 @main.route('/logout')

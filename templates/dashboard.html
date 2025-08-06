@@ -45,7 +45,7 @@
             
             <div class="action-buttons">
                 <button type="submit" name="action" value="summarize" class="btn-action">Summarize</button>
-                <button type="submit" name="action" value="review" class="btn-action btn-disabled" disabled>Review Key Clauses</button>
+                <button type="submit" name="action" value="review" class="btn-action">Review Key Clauses</button>
             </div>
         </form>
 
@@ -55,6 +55,22 @@
             <div class="result-content">
                 <p>{{ summary }}</p>
             </div>
+        </div>
+        {% endif %}
+
+        {% if clauses %}
+        <div class="results-area">
+            <h2>Key Clauses</h2>
+            {% for clause in clauses %}
+            <div class="clause-item">
+                <h3>{{ clause.title }}</h3>
+                <p>{{ clause.text }}</p>
+            </div>
+            {% else %}
+            <div class="result-content">
+                <p>No specific clauses were identified in the document.</p>
+            </div>
+            {% endfor %}
         </div>
         {% endif %}
     </div>
@@ -90,7 +106,7 @@
                     message.classList.add('fade-out');
                     // Remove the element from the DOM after the transition ends
                     message.addEventListener('transitionend', () => message.remove());
-                }, 2000); // Message disappears after 4 seconds
+                }, 2500); // Message disappears after 2.5 seconds
             });
         });
     </script>
