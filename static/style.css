@@ -294,3 +294,25 @@ h1 {
   color: #34495e;
   border: 1.5px solid #b0bec5;
 }
+
+.clause-item {
+    background-color: #f9fafb;
+    border: 1px solid #e7e7e7;
+    padding: 15px 20px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+}
+
+.clause-item h3 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    color: #2c3e50;
+    font-size: 18px;
+}
+
+.clause-item p {
+    margin: 0;
+    line-height: 1.6;
+    color: #34495e;
+    white-space: pre-wrap; /* Preserves line breaks in the clause text */
+}
