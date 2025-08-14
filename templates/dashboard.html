@@ -23,7 +23,6 @@
     <div class="dashboard-container">
         <h1>Document Analysis</h1>
 
-        <!-- Flash Messages will be displayed here -->
         <div class="flash-container">
             {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
@@ -34,21 +33,33 @@
             {% endwith %}
         </div>
 
-        <form method="post" enctype="multipart/form-data" class="upload-form">
-            <div class="file-input-wrapper">
-                <label for="file" class="file-label">
-                    <span id="file-name-display">Choose a file (.docx, .pdf)</span>
-                </label>
-                <input type="file" id="file" name="file" accept=".pdf,.docx" required>
-                <button type="button" id="remove-file-btn" class="btn-remove" style="display: none;">Remove</button>
-            </div>
-            
-            <div class="action-buttons">
-                <button type="submit" name="action" value="summarize" class="btn-action">Summarize</button>
-                <button type="submit" name="action" value="review" class="btn-action">Review Key Clauses</button>
-            </div>
-        </form>
+        <!-- File Upload / Active File Display -->
+        <div class="file-input-wrapper {% if filename %}active-file-container{% endif %}">
+            {% if filename %}
+                <span class="file-label active-file">Active file: {{ filename }}</span>
+                <a href="{{ url_for('main.remove_file') }}" class="btn-remove">Remove</a>
+            {% else %}
+                <form method="post" enctype="multipart/form-data" id="upload-form">
+                    <label for="file" class="file-label">
+                        <span id="file-name-display">Choose a file to begin (.docx, .pdf)</span>
+                    </label>
+                    <input type="file" id="file" name="file" accept=".pdf,.docx" onchange="document.getElementById('upload-form').submit()" required>
+                </form>
+            {% endif %}
+        </div>
+        
+        <!-- Action Buttons -->
+        <div class="action-buttons">
+            <form method="post" class="action-form">
+                <button type="submit" name="action" value="summarize" class="btn-action" {% if not filename %}disabled{% endif %}>Summarize</button>
+            </form>
+            <form method="post" class="action-form">
+                <button type="submit" name="action" value="review" class="btn-action" {% if not filename %}disabled{% endif %}>Review Key Clauses</button>
+            </form>
+            <a href="{{ url_for('main.dashboard', view='chat') }}" class="btn-action {% if not filename %}btn-disabled{% endif %}">Query</a>
+        </div>
 
+        <!-- Display Summary Result -->
         {% if summary %}
         <div class="results-area">
             <h2>Summary</h2>
@@ -58,56 +69,136 @@
         </div>
         {% endif %}
 
+        <!-- Display Clauses Result -->
         {% if clauses %}
         <div class="results-area">
             <h2>Key Clauses</h2>
             {% for clause in clauses %}
             <div class="clause-item">
-                <h3>{{ clause.title }}</h3>
+                <div class="clause-title-header">
+                    {% if clause.is_important %}
+                        <span class="flag-icon">🚩</span>
+                    {% endif %}
+                    <h3>{{ clause.title }}</h3>
+                </div>
                 <p>{{ clause.text }}</p>
             </div>
             {% else %}
-            <div class="result-content">
-                <p>No specific clauses were identified in the document.</p>
-            </div>
+            <div class="result-content"><p>No specific clauses were identified.</p></div>
             {% endfor %}
         </div>
         {% endif %}
+
+        <!-- CHAT INTERFACE -->
+        {% if show_chat and filename %}
+        <div class="results-area chat-section">
+            <h2>Query Document</h2>
+            <div class="chat-container">
+                <div class="chat-messages" id="chat-messages">
+                    {% for message in chat_history %}
+                        <div class="message {{ message.role }}">
+                            <div class="bubble">{{ message.text | safe }}</div>
+                        </div>
+                    {% else %}
+                        <div class="message ai"><div class="bubble">Ask me anything about the document!</div></div>
+                    {% endfor %}
+                </div>
+                <!-- This form will now be handled by JavaScript -->
+                <form id="chat-form" class="chat-input-form">
+                    <input type="text" id="question-input" name="question" placeholder="Ask a question..." required autofocus>
+                    <button type="submit">➤</button>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // --- Logic for Interactive File Input ---
-            const fileInput = document.getElementById('file');
-            const fileNameDisplay = document.getElementById('file-name-display');
-            const removeFileBtn = document.getElementById('remove-file-btn');
-
-            fileInput.addEventListener('change', function() {
-                if (this.files.length > 0) {
-                    fileNameDisplay.textContent = this.files[0].name;
-                    removeFileBtn.style.display = 'inline-block';
-                } else {
-                    fileNameDisplay.textContent = 'Choose a file (.docx, .pdf)';
-                    removeFileBtn.style.display = 'none';
-                }
-            });
-
-            removeFileBtn.addEventListener('click', function() {
-                fileInput.value = ''; // Clear the file input
-                fileNameDisplay.textContent = 'Choose a file (.docx, .pdf)';
-                removeFileBtn.style.display = 'none';
-            });
-
             // --- Logic for Fading Flash Messages ---
             const flashMessages = document.querySelectorAll('.alert');
             flashMessages.forEach(function(message) {
-                // Set a timeout to add the fade-out class
                 setTimeout(() => {
                     message.classList.add('fade-out');
-                    // Remove the element from the DOM after the transition ends
                     message.addEventListener('transitionend', () => message.remove());
-                }, 2500); // Message disappears after 2.5 seconds
+                }, 4000);
             });
+
+            // --- NEW: ASYNCHRONOUS CHAT LOGIC ---
+            const chatForm = document.getElementById('chat-form');
+            const questionInput = document.getElementById('question-input');
+            const chatMessages = document.getElementById('chat-messages');
+
+            if (chatForm) {
+                chatForm.addEventListener('submit', function(event) {
+                    event.preventDefault(); // Prevent the default form submission (page reload)
+                    
+                    const question = questionInput.value.trim();
+                    if (!question) return;
+
+                    // 1. Instantly add user's message to the chat window
+                    appendMessage(question, 'user');
+                    questionInput.value = ''; // Clear the input field
+
+                    // 2. Add a "typing..." indicator for the AI
+                    const typingIndicator = appendMessage('...', 'ai typing');
+
+                    // 3. Send the question to the new /query route in the background
+                    fetch("{{ url_for('main.query') }}", {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ question: question }),
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        // 4. Replace the "typing..." indicator with the real answer
+                        if (data.answer) {
+                            typingIndicator.querySelector('.bubble').textContent = data.answer;
+                            typingIndicator.classList.remove('typing');
+                        } else {
+                            typingIndicator.querySelector('.bubble').textContent = data.error || 'An unknown error occurred.';
+                            typingIndicator.classList.remove('typing');
+                            typingIndicator.classList.add('error');
+                        }
+                        scrollToBottom();
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        typingIndicator.querySelector('.bubble').textContent = 'Failed to get a response from the server.';
+                        typingIndicator.classList.remove('typing');
+                        typingIndicator.classList.add('error');
+                        scrollToBottom();
+                    });
+                });
+            }
+
+            // Helper function to add a new message to the chat display
+            function appendMessage(text, role) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${role}`;
+                
+                const bubbleDiv = document.createElement('div');
+                bubbleDiv.className = 'bubble';
+                bubbleDiv.textContent = text;
+                
+                messageDiv.appendChild(bubbleDiv);
+                chatMessages.appendChild(messageDiv);
+                scrollToBottom();
+                return messageDiv;
+            }
+
+            // Helper function to scroll the chat window to the latest message
+            function scrollToBottom() {
+                if (chatMessages) {
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                }
+            }
+
+            // Initial scroll to bottom on page load
+            scrollToBottom();
         });
     </script>
 </body>

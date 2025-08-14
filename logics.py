@@ -200,3 +200,48 @@ def review_key_clauses(filepath, llm):
     vector_store = get_vector_store(text_chunks)
     clauses = get_clauses_from_chain(llm, vector_store)
     return clauses
+
+
+def get_answer_from_chain(llm, vector_store, question):
+    """Gets an answer to a specific question from the document."""
+    try:
+        with open("key.yaml", "r") as f:
+            config = yaml.safe_load(f)
+        api_key = config.get("GEMINI_API_KEY")
+        if not api_key: raise ValueError("GEMINI_API_KEY not found in key.yaml.")
+    except FileNotFoundError:
+        raise FileNotFoundError("key.yaml not found.")
+
+    model_name = llm.model_name.split('/')[-1]
+    chat_llm_wrapper = ChatGoogleGenerativeAI(model=model_name, google_api_key=api_key, temperature=0.3, convert_system_message_to_human=True)
+    
+    prompt_template_str = """
+    You are a helpful assistant. Answer the question based only on the provided context.
+    If the answer is not in the context, say "I'm sorry, that information is not in the document."
+
+    CONTEXT: {context}
+    QUESTION: {question}
+    ANSWER:
+    """
+    prompt = PromptTemplate.from_template(prompt_template_str)
+    chain = load_qa_chain(chat_llm_wrapper, chain_type="stuff", prompt=prompt)
+    
+    # Search the vector store for documents relevant to the user's question
+    docs = vector_store.similarity_search(question, k=5)
+    if not docs: return "I'm sorry, I couldn't find any relevant sections in the document to answer that question."
+
+    response = chain.invoke({"input_documents": docs, "question": question})
+    return response.get('output_text', 'Failed to get an answer.')
+
+def query_document(filepath, llm, question):
+    """Main function to orchestrate the document query process."""
+    print(f"Starting query for: {filepath}")
+    raw_text = extract_text_from_file(filepath)
+    if not raw_text.strip(): return "Could not extract text from the document."
+    
+    documents = get_text_chunks(raw_text)
+    if not documents: return "Failed to create text chunks."
+        
+    vector_store = get_vector_store(documents)
+    answer = get_answer_from_chain(llm, vector_store, question)
+    return answer
