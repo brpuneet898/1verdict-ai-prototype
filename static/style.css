@@ -6,7 +6,7 @@ body {
   color: #333;
 }
 
-.top-bar {
+/* .top-bar {
   width: 100%;
   display: flex;
   justify-content: space-between;
@@ -15,7 +15,7 @@ body {
   box-sizing: border-box;
   background-color: #fff;
   box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-}
+} */
 
 .user-greeting {
     font-size: 18px;
@@ -23,12 +23,12 @@ body {
     color: #2c3e50;
 }
 
-.button-group {
+/* .button-group {
   display: flex;
   gap: 10px;
-}
+} */
 
-.btn {
+/* .btn {
   background: #2c3e50;
   color: #fff;
   padding: 8px 18px;
@@ -46,7 +46,7 @@ h1 {
   color: #2c3e50;
   text-align: center;
   margin: 32px 0;
-}
+} */
 
 /* Dashboard Styles */
 .dashboard-container {
