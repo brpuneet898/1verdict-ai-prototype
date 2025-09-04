@@ -1,26 +1,25 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
+    <head>
     <meta charset="UTF-8" />
     <title>1Verdict AI Prototype</title>
-    <link
-      rel="stylesheet"
-      href="{{ url_for('static', filename='style.css') }}"
-    />
-</head>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+    </head>
+
 <body>
-    <div class="top-bar">
-        <div class="user-greeting">
+    <div class="w-full flex justify-between items-center px-6 py-4 bg-white shadow-sm">
+        <div class="text-gray-700 font-medium">
             {% if user_name %}
-                Hi, {{ user_name }}
+            Hi, {{ user_name }}
             {% endif %}
         </div>
-        <div class="button-group">
-            <a href="/logout" class="btn">Logout</a>
-        </div>
+        <a href="/logout" class="px-4 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600 transition">
+            Logout
+        </a>
     </div>
 
-    <div class="dashboard-container">
+    <div class="max-w-5xl mx-auto my-8 p-6 bg-white rounded-2xl shadow-md">
         <h1>Document Analysis</h1>
 
         <div class="flash-container">
@@ -34,13 +33,13 @@
         </div>
 
         <!-- File Upload / Active File Display -->
-        <div class="file-input-wrapper {% if filename %}active-file-container{% endif %}">
+        <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-500 transition {% if filename %}bg-gray-50{% endif %}">
             {% if filename %}
-                <span class="file-label active-file">Active file: {{ filename }}</span>
-                <a href="{{ url_for('main.remove_file') }}" class="btn-remove">Remove</a>
+                <span class="block text-gray-700 font-medium cursor-pointer text-green-600 font-semibold">Active file: {{ filename }}</span>
+                <a href="{{ url_for('main.remove_file') }}" class="ml-4 px-4 py-2 bg-red-500 text-white text-sm rounded-lg hover:bg-red-600 transition">Remove</a>
             {% else %}
                 <form method="post" enctype="multipart/form-data" id="upload-form">
-                    <label for="file" class="file-label">
+                    <label for="file" class="block text-gray-700 font-medium cursor-pointer">
                         <span id="file-name-display">Choose a file to begin (.docx, .pdf)</span>
                     </label>
                     <input type="file" id="file" name="file" accept=".pdf,.docx" onchange="document.getElementById('upload-form').submit()" required>
@@ -49,21 +48,32 @@
         </div>
         
         <!-- Action Buttons -->
-        <div class="action-buttons">
-            <form method="post" class="action-form">
-                <button type="submit" name="action" value="summarize" class="btn-action" {% if not filename %}disabled{% endif %}>Summarize</button>
+        <div class="flex justify-center gap-4 mt-6">
+            <form method="post" class="inline">
+                <button type="submit" name="action" value="summarize"
+                class="px-5 py-2.5 bg-blue-600 text-white font-semibold rounded-lg shadow hover:bg-blue-700 transition {% if not filename %}opacity-60 cursor-not-allowed{% endif %}"
+                {% if not filename %}disabled{% endif %}>
+                Summarize
+                </button>
             </form>
-            <form method="post" class="action-form">
-                <button type="submit" name="action" value="review" class="btn-action" {% if not filename %}disabled{% endif %}>Review Key Clauses</button>
+            <form method="post" class="inline">
+                <button type="submit" name="action" value="review"
+                class="px-5 py-2.5 bg-blue-600 text-white font-semibold rounded-lg shadow hover:bg-blue-700 transition {% if not filename %}opacity-60 cursor-not-allowed{% endif %}"
+                {% if not filename %}disabled{% endif %}>
+                Review Key Clauses
+                </button>
             </form>
-            <a href="{{ url_for('main.dashboard', view='chat') }}" class="btn-action {% if not filename %}btn-disabled{% endif %}">Query</a>
+            <a href="{{ url_for('main.dashboard', view='chat') }}"
+                class="px-5 py-2.5 bg-blue-600 text-white font-semibold rounded-lg shadow hover:bg-blue-700 transition {% if not filename %}opacity-60 pointer-events-none{% endif %}">
+                Query
+            </a>
         </div>
 
         <!-- Display Summary Result -->
         {% if summary %}
-        <div class="results-area">
+        <div class="mt-8 border-t pt-6">
             <h2>Summary</h2>
-            <div class="result-content">
+            <div class="bg-gray-50 p-4 rounded-lg text-gray-700 leading-relaxed">
                 <p>{{ summary }}</p>
             </div>
         </div>
@@ -71,10 +81,10 @@
 
         <!-- Display Clauses Result -->
         {% if clauses %}
-        <div class="results-area">
+        <div class="mt-8 border-t pt-6">
             <h2>Key Clauses</h2>
             {% for clause in clauses %}
-            <div class="clause-item">
+            <div class="bg-gray-50 border border-gray-200 p-4 rounded-lg mb-4">
                 <div class="clause-title-header">
                     {% if clause.is_important %}
                         <span class="flag-icon">🚩</span>
@@ -84,29 +94,33 @@
                 <p>{{ clause.text }}</p>
             </div>
             {% else %}
-            <div class="result-content"><p>No specific clauses were identified.</p></div>
+            <div class="bg-gray-50 p-4 rounded-lg text-gray-700 leading-relaxed"><p>No specific clauses were identified.</p></div>
             {% endfor %}
         </div>
         {% endif %}
 
         <!-- CHAT INTERFACE -->
         {% if show_chat and filename %}
-        <div class="results-area chat-section">
+        <div class="mt-8 border-t pt-6 chat-section">
             <h2>Query Document</h2>
-            <div class="chat-container">
-                <div class="chat-messages" id="chat-messages">
+            <div class="flex flex-col border border-gray-300 rounded-xl overflow-hidden h-[500px]">
+                <div class="flex-1 p-4 overflow-y-auto bg-gray-50 flex flex-col gap-4" id="chat-messages">
                     {% for message in chat_history %}
                         <div class="message {{ message.role }}">
-                            <div class="bubble">{{ message.text | safe }}</div>
+                            <div class="bg-gray-200 text-gray-800 px-4 py-2 rounded-2xl rounded-bl-sm max-w-[80%] self-start">{{ message.text | safe }}</div>
                         </div>
                     {% else %}
-                        <div class="message ai"><div class="bubble">Ask me anything about the document!</div></div>
+                        <div class="message ai"><div class="bg-gray-200 text-gray-800 px-4 py-2 rounded-2xl rounded-bl-sm max-w-[80%] self-start">Ask me anything about the document!</div></div>
                     {% endfor %}
                 </div>
                 <!-- This form will now be handled by JavaScript -->
-                <form id="chat-form" class="chat-input-form">
-                    <input type="text" id="question-input" name="question" placeholder="Ask a question..." required autofocus>
-                    <button type="submit">➤</button>
+                <form id="chat-form" class="flex border-t border-gray-200 p-3 bg-white">
+                    <input type="text" id="question-input" name="question" placeholder="Ask a question..."
+                            class="flex-1 border border-gray-300 rounded-full px-4 py-2 focus:ring focus:ring-blue-200 focus:border-blue-500 text-sm"
+                            required autofocus>
+                    <button type="submit" class="ml-3 bg-blue-600 text-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-blue-700 transition">
+                        ➤
+                    </button>
                 </form>
             </div>
         </div>
